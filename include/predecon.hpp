@@ -17,8 +17,10 @@ private:
 	DistanceMetric distance_metric;
 	int attribute_amount;
 	std::vector<std::vector<std::string>> e_neighbours;
+	std::vector<std::vector<float>> variances;
 	float calculateDistanceEuclidean(sample, sample);
 	std::vector<std::string> calculateENeighbours(sample);
+	std::vector<float> calculateVariances(sample, std::vector<std::string>);
 public:
 	predecon();
 	~predecon();
@@ -30,4 +32,5 @@ public:
 	void setDistanceMetric(DistanceMetric);
 	void calculateENeighbours();
 	void printENeighbours();
+	void calculateVariances();
 };

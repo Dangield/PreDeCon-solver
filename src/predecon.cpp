@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cmath>
 #include <numeric>
+#include <cstring>
 
 predecon::predecon() {
 	epsilon = 0;
@@ -76,6 +77,7 @@ void predecon::printData() {
 		printf("%s\t\t", att.c_str());
 	}
 	if (!e_neighbours.empty()) printf("E-neighbours\t");
+	if (!variances.empty()) printf("Variances\t");
 	printf("\n");
 
 	for (int i = 0; i < data.size(); i++) {
@@ -83,7 +85,8 @@ void predecon::printData() {
 		for (float attribute_value : data[i].getAttributes()) {
 			printf("%3.4f\t\t", attribute_value);
 		}
-		if (!e_neighbours.empty()) printf("%s\t", std::accumulate(e_neighbours[i].begin(), e_neighbours[i].end(), std::string("")).c_str());
+		if (!e_neighbours.empty()) printf("%s\t\t", std::accumulate(e_neighbours[i].begin(), e_neighbours[i].end(), std::string("")).c_str());
+		if (!variances.empty()) for (float var : variances[i]) printf("%3.4f\t", var);
 		printf("\n");
 	}
 }
@@ -121,4 +124,28 @@ std::vector<std::string> predecon::calculateENeighbours(sample p) {
 void predecon::printENeighbours() {
 	printf("Data\tE-neighbours\n");
 	for (int i = 0; i < data.size(); i++) printf("%s\t%s\n", data[i].getId().c_str(), std::accumulate(e_neighbours[i].begin(), e_neighbours[i].end(), std::string("")).c_str());
+}
+
+void predecon::calculateVariances() {
+	for (int i = 0; i < data.size(); i++) {
+		variances.push_back(calculateVariances(data[i], e_neighbours[i]));
+	}
+	e_neighbours.clear();
+}
+
+std::vector<float> predecon::calculateVariances(sample p, std::vector<std::string> neighbours) {
+	std::vector<float> vars;
+	for (int i = 0; i < attribute_amount; i++) vars.push_back(0.0);
+	for (std::string neighbour : neighbours) {
+		for (sample q : data) {
+			if (strcmp(q.getId().c_str(), neighbour.c_str()) == 0) {
+				for (int i = 0; i < attribute_amount; i++) {
+					vars[i] += pow(p.getAttribute(i) - q.getAttribute(i), 2.0);
+				}
+				break;
+			}
+		}
+	}
+	for (int i = 0; i < attribute_amount; i++) vars[i] = vars[i]/neighbours.size();
+	return vars;
 }

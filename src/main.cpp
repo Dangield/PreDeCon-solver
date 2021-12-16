@@ -5,9 +5,10 @@ int main(int argc, char const *argv[])
 	predecon solver;
 	std::string filename = "../test_data";
 	solver.loadDataFromFile(filename);
-	solver.setParameters(2.0, 0.0, 0, 0);
+	solver.setParameters(2.0, 0.625, 0, 0);
 	solver.calculateENeighbours();
-	// solver.printENeighbours();
+	solver.printData();
+	solver.calculateVariances();
 	solver.printData();
 	return 0;
 }
