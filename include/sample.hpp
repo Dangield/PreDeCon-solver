@@ -14,4 +14,5 @@ public:
 	std::string getId();
 	std::vector<float> getAttributes();
 	float getAttribute(int);
+	int getAttributeAmount();
 };

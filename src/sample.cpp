@@ -26,3 +26,7 @@ std::vector<float> sample::getAttributes() {
 float sample::getAttribute(int n){
 	return attribute_values[n];
 }
+
+int sample::getAttributeAmount() {
+	return attribute_values.size();
+}
