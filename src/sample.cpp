@@ -1,11 +1,15 @@
 #include "sample.hpp"
 
+int sample::global_id = 0;
+
 sample::sample(){
-	id = "0";
+	id = global_id;
+	global_id++;
 }
 
 sample::sample(std::string id_n) {
 	id = id_n;
+	global_id++;
 }
 
 sample::~sample(){

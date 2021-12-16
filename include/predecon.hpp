@@ -24,7 +24,7 @@ public:
 	~predecon();
 	void setParameters(float, float, int, int, float k = 100);
 	void printParameters();
-	void loadDataFromFile(std::string);
+	void loadDataFromFile(std::string, bool dataHasIds = true);
 	void printData();
 	float calculateDistance(sample, sample);
 	void setDistanceMetric(DistanceMetric);

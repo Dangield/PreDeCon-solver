@@ -6,6 +6,7 @@ class sample
 private:
 	std::string id;
 	std::vector<float> attribute_values;
+	static int global_id;
 public:
 	sample();
 	sample(std::string);

@@ -30,7 +30,7 @@ void predecon::printParameters() {
 }
 
 
-void predecon::loadDataFromFile(std::string filename){
+void predecon::loadDataFromFile(std::string filename, bool dataHasIds){
 	// open data file
 	std::ifstream file(filename);
 	if (!file) {
@@ -53,10 +53,13 @@ void predecon::loadDataFromFile(std::string filename){
 	// read samples
 	while (getline(file, line)) {
 		// std::cout << line << std::endl;
-		pos = line.find(delimiter);
-		value = line.substr(0, pos);
-		data.push_back(sample(value));
-		line.erase(0, pos + delimiter.length());
+		if (dataHasIds){
+			pos = line.find(delimiter);
+			value = line.substr(0, pos);
+			data.push_back(sample(value));
+			line.erase(0, pos + delimiter.length());
+		}
+		else data.push_back(sample());
 		while ((pos = line.find(delimiter)) != std::string::npos) {
 			value = line.substr(0, pos);
 			data.back().pushAttribute(std::stof(value));

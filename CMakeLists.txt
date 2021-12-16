@@ -8,9 +8,14 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-set(PREDECON_SOURCES src/predecon.cpp src/sample.cpp)
+set(SAMPLE_SOURCES src/sample.cpp)
+add_library(samples ${SAMPLE_SOURCES})
+target_include_directories(samples PUBLIC include)
+
+set(PREDECON_SOURCES src/predecon.cpp)
 add_library(predecon ${PREDECON_SOURCES})
 target_include_directories(predecon PUBLIC include)
+target_link_libraries(predecon samples)
 
 # add the executable
 set(SOURCES src/main.cpp)
