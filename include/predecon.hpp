@@ -18,9 +18,11 @@ private:
 	int attribute_amount;
 	std::vector<std::vector<std::string>> e_neighbours;
 	std::vector<std::vector<float>> variances;
+	std::vector<std::vector<float>> subspace_preference_vectors;
 	float calculateDistanceEuclidean(sample, sample);
 	std::vector<std::string> calculateENeighbours(sample);
 	std::vector<float> calculateVariances(sample, std::vector<std::string>);
+	std::vector<float> calculateSubspacePreferenceVectors(std::vector<float>);
 public:
 	predecon();
 	~predecon();
@@ -33,4 +35,5 @@ public:
 	void calculateENeighbours();
 	void printENeighbours();
 	void calculateVariances();
+	void calculateSubspacePreferenceVectors();
 };

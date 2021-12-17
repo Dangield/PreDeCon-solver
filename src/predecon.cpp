@@ -27,7 +27,7 @@ void predecon::setParameters(float e, float d, int l, int m, float k) {
 }
 
 void predecon::printParameters() {
-	printf("[PREDECON] Algorythm parameters:\nepsilon = %3.4f\ndelta = %3.4f\nlambda = %d\nmi = %d\nkappa = %3.4f\n", epsilon, delta, lambda, mi, kappa);
+	printf("[PREDECON] Algorythm parameters:\nepsilon = %.3f\ndelta = %.3f\nlambda = %d\nmi = %d\nkappa = %.3f\n", epsilon, delta, lambda, mi, kappa);
 }
 
 
@@ -78,15 +78,17 @@ void predecon::printData() {
 	}
 	if (!e_neighbours.empty()) printf("E-neighbours\t");
 	if (!variances.empty()) printf("Variances\t");
+	if (!subspace_preference_vectors.empty()) printf("SPVectors\t");
 	printf("\n");
 
 	for (int i = 0; i < data.size(); i++) {
 		printf("%s\t", data[i].getId().c_str());
 		for (float attribute_value : data[i].getAttributes()) {
-			printf("%3.4f\t\t", attribute_value);
+			printf("%.3f\t\t", attribute_value);
 		}
 		if (!e_neighbours.empty()) printf("%s\t\t", std::accumulate(e_neighbours[i].begin(), e_neighbours[i].end(), std::string("")).c_str());
-		if (!variances.empty()) for (float var : variances[i]) printf("%3.4f\t", var);
+		if (!variances.empty()) for (float var : variances[i]) printf("%.3f\t", var);
+		if (!subspace_preference_vectors.empty()) for (float w : subspace_preference_vectors[i]) printf("%.3f\t", w);
 		printf("\n");
 	}
 }
@@ -103,7 +105,6 @@ float predecon::calculateDistance(sample p, sample q) {
 float predecon::calculateDistanceEuclidean(sample p, sample q) {
 	float distance = 0;
 	for (int i = 0; i < attribute_amount; i++) distance += pow(p.getAttribute(i) - q.getAttribute(i), 2.0);
-	// printf("%f", pow(distance, 0.5));
 	return pow(distance, 0.5);
 }
 
@@ -130,7 +131,7 @@ void predecon::calculateVariances() {
 	for (int i = 0; i < data.size(); i++) {
 		variances.push_back(calculateVariances(data[i], e_neighbours[i]));
 	}
-	e_neighbours.clear();
+	// e_neighbours.clear();
 }
 
 std::vector<float> predecon::calculateVariances(sample p, std::vector<std::string> neighbours) {
@@ -148,4 +149,15 @@ std::vector<float> predecon::calculateVariances(sample p, std::vector<std::strin
 	}
 	for (int i = 0; i < attribute_amount; i++) vars[i] = vars[i]/neighbours.size();
 	return vars;
+}
+
+void predecon::calculateSubspacePreferenceVectors() {
+	for (std::vector<float> vars : variances) subspace_preference_vectors.push_back(calculateSubspacePreferenceVectors(vars));
+		variances.clear();
+}
+
+std::vector<float> predecon::calculateSubspacePreferenceVectors(std::vector<float>  vars) {
+	std::vector<float> v;
+	for (float var : vars) if (var > delta) v.push_back(1); else v.push_back(kappa);
+	return v;
 }
