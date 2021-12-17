@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numeric>
 #include <cstring>
+#include <algorithm>
 
 predecon::predecon() {
 	epsilon = 0;
@@ -12,6 +13,7 @@ predecon::predecon() {
 	mi = 1;
 	kappa = 100;
 	distance_metric = Euclidean;
+	current_cluster_id = 0;
 	printf("[PREDECON] Predecon solver initialized\n");
 }
 
@@ -71,7 +73,8 @@ void predecon::loadDataFromFile(std::string filename, bool dataHasIds){
 	attribute_amount = data[0].getAttributeAmount();
 }
 
-void predecon::printData() {
+void predecon::printData(bool waitForInput) {
+	std::cout << "\033[2J\033[1;1H";
 	printf("Data\t");
 	for (std::string att : attribute_names) {
 		printf("%s\t\t", att.c_str());
@@ -79,6 +82,9 @@ void predecon::printData() {
 	if (!e_neighbours.empty()) printf("E-neighbours\t");
 	if (!variances.empty()) printf("Variances\t");
 	if (!subspace_preference_vectors.empty()) printf("SPVectors\t");
+	if (!preference_weighted_e_neighbours.empty()) printf("PWE-neighbours\t");
+	if (!core.empty()) printf("Core\t");
+	if (!cluster.empty()) printf("ClusterId\t");
 	printf("\n");
 
 	for (int i = 0; i < data.size(); i++) {
@@ -89,8 +95,25 @@ void predecon::printData() {
 		if (!e_neighbours.empty()) printf("%s\t\t", std::accumulate(e_neighbours[i].begin(), e_neighbours[i].end(), std::string("")).c_str());
 		if (!variances.empty()) for (float var : variances[i]) printf("%.3f\t", var);
 		if (!subspace_preference_vectors.empty()) for (float w : subspace_preference_vectors[i]) printf("%.3f\t", w);
+		if (!preference_weighted_e_neighbours.empty()) printf("%s\t\t", std::accumulate(preference_weighted_e_neighbours[i].begin(), preference_weighted_e_neighbours[i].end(), std::string("")).c_str());
+		if (!core.empty()) printf("%s\t", property_strings[core[i]].c_str());
+		if (!cluster.empty()) if (cluster[i] > 0) printf("%d\t", cluster[i]); else printf("-\t");
 		printf("\n");
 	}
+
+	if (!queue_theta.empty()) {
+		printf("Queue theta:\t");
+		for (int id : queue_theta) printf("%s ", data[id].getId().c_str());
+		printf("\n");
+	}
+
+	if (!queue_R.empty()) {
+		printf("Queue R:\t");
+		for (int id : queue_R) printf("%s ", data[id].getId().c_str());
+		printf("\n");
+	}
+
+	if (waitForInput) std::cin.get();
 }
 
 float predecon::calculateDistance(sample p, sample q) {
@@ -153,11 +176,130 @@ std::vector<float> predecon::calculateVariances(sample p, std::vector<std::strin
 
 void predecon::calculateSubspacePreferenceVectors() {
 	for (std::vector<float> vars : variances) subspace_preference_vectors.push_back(calculateSubspacePreferenceVectors(vars));
-		variances.clear();
+	// variances.clear();
 }
 
 std::vector<float> predecon::calculateSubspacePreferenceVectors(std::vector<float>  vars) {
 	std::vector<float> v;
 	for (float var : vars) if (var > delta) v.push_back(1); else v.push_back(kappa);
 	return v;
+}
+
+void predecon::calculatePreferenceWeightedENeighbours() {
+	for (int i = 0; i < data.size(); i++) preference_weighted_e_neighbours.push_back(calculatePreferenceWeightedENeighbours(data[i], subspace_preference_vectors[i]));
+}
+
+std::vector<std::string> predecon::calculatePreferenceWeightedENeighbours(sample p, std::vector<float> w) {
+	std::vector<std::string> neighbours;
+	for (int i = 0; i < data.size(); i++) if (std::max(calculateWeightedDistance(p, data[i], w), calculateWeightedDistance(data[i], p, subspace_preference_vectors[i])) <= epsilon) neighbours.push_back(data[i].getId());
+	return neighbours;
+}
+
+float predecon::calculateWeightedDistance(sample p, sample q, std::vector<float> w) {
+	switch(distance_metric){
+		case Euclidean:
+			return calculateWeightedDistanceEuclidean(p, q, w);
+		default:
+			return 0;
+	}
+}
+
+float predecon::calculateWeightedDistanceEuclidean(sample p, sample q, std::vector<float> w) {
+	float distance = 0;
+	for (int i = 0; i < attribute_amount; i++) distance += w[i]*pow(p.getAttribute(i) - q.getAttribute(i), 2.0);
+	return pow(distance, 0.5);
+}
+
+void predecon::solve() {
+	printData(true);
+	for (int i = 0; i < data.size(); i++) {
+		core.push_back(Unknown);
+		cluster.push_back(0);
+	}
+	// for each sample i
+	for (int i = 0; i < data.size(); i++) {
+		printData();
+		printf("Sample %s\n", data[i].getId().c_str());
+		std::cin.get();
+		// if it's unclassified
+		if (cluster[i] == 0) {
+			// if it's a core
+			if (isCore(i)) {
+				// generate new id
+				current_cluster_id++;
+				// add all preference weighted e-neighbours to queue
+				for (std::string neighbour : preference_weighted_e_neighbours[i]) {
+					for (int j = 0; j < data.size(); j++) {
+						if (strcmp(data[j].getId().c_str(), neighbour.c_str()) == 0) {
+							queue_theta.push_back(j);
+						}
+					}
+				}
+				printData(true);
+				// for everything in theta queue
+				while (!queue_theta.empty()) {
+					// fill R queue
+					// 3 DirReach(q,x) conditions (q is first element in theta queue)
+					// if q is core
+					if (isCore(queue_theta[0])){
+						// and x is in preference weighted e-neighbourhood of q
+						for (std::string neighbour : preference_weighted_e_neighbours[queue_theta[0]]) {
+							for (int j = 0; j < data.size(); j++){
+								if (strcmp(data[j].getId().c_str(), neighbour.c_str()) == 0) {
+									// and PDIM(x) <= lambda, add x to R queue
+									if (calculateSubspacePreferenceDimensionality(j) <= lambda) queue_R.push_back(j);
+								}
+							}
+						}
+						printData(true);
+						// for each element in R
+						for (int id : queue_R) {
+							// if element is unclassified and not in queue theta put it in there
+							if (cluster[id] == 0 && std::find(queue_theta.begin(), queue_theta.end(), id) == queue_theta.end()) queue_theta.push_back(id);
+							// if element is unclassified or noise, classify element
+							if (cluster[id] == 0 || isNoise(id)) cluster[id] = current_cluster_id;
+						}
+						queue_R.clear();
+					}
+					queue_theta.erase(queue_theta.begin());
+					printData(true);
+				}
+			}
+			else core[i] = Noise;
+		}
+	}
+}
+
+bool predecon::isCore(int id) {
+	switch(core[id]){
+		case Unknown:
+			if (calculateSubspacePreferenceDimensionality(id) <= lambda && preference_weighted_e_neighbours[id].size() >= mi){
+				core[id] = Core;
+				return true;
+			}
+		case Noise:
+			return false;
+		case Core:
+			return true;
+	}
+}
+
+bool predecon::isNoise(int id) {
+	switch(core[id]){
+		case Unknown:
+			if (calculateSubspacePreferenceDimensionality(id) <= lambda && preference_weighted_e_neighbours[id].size() >= mi) {
+				core[id] = Core;
+				return false;
+			}
+		case Noise:
+			return true;
+		case Core:
+			return false;
+	}
+}
+
+int predecon::calculateSubspacePreferenceDimensionality(int id) {
+	int dim = 0;
+	for (float value : subspace_preference_vectors[id]) if (value == kappa) dim++;
+	return dim;
 }
