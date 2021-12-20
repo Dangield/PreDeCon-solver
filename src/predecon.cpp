@@ -5,6 +5,7 @@
 #include <numeric>
 #include <cstring>
 #include <algorithm>
+#include "matplotlibcpp.h"
 
 predecon::predecon() {
 	epsilon = 0;
@@ -120,6 +121,12 @@ float predecon::calculateDistance(sample p, sample q) {
 	switch(distance_metric){
 		case Euclidean:
 			return calculateDistanceEuclidean(p, q);
+		case Minkowsky1:
+			return calculateDistanceMinkowsky1(p, q);
+		case Minkowsky2:
+			return calculateDistanceMinkowsky2(p, q);
+		case MinkowskyInf:
+			return calculateDistanceMinkowsky2(p, q);
 		default:
 			return 0;
 	}
@@ -129,6 +136,24 @@ float predecon::calculateDistanceEuclidean(sample p, sample q) {
 	float distance = 0;
 	for (int i = 0; i < attribute_amount; i++) distance += pow(p.getAttribute(i) - q.getAttribute(i), 2.0);
 	return pow(distance, 0.5);
+}
+
+float predecon::calculateDistanceMinkowsky1(sample p, sample q) {
+	float distance = 0;
+	for (int i = 0; i < attribute_amount; i++) distance += abs(p.getAttribute(i) - q.getAttribute(i));
+	return distance;
+}
+
+float predecon::calculateDistanceMinkowsky2(sample p, sample q) {
+	float distance = 0;
+	for (int i = 0; i < attribute_amount; i++) distance += pow(abs(p.getAttribute(i) - q.getAttribute(i)), 2.0);
+	return pow(distance, 0.5);
+}
+
+float predecon::calculateDistanceMinkowskyInf(sample p, sample q) {
+	float distance = 0;
+	for (int i = 0; i < attribute_amount; i++) distance = std::max(float(abs(p.getAttribute(i) - q.getAttribute(i))), distance);
+	return distance;
 }
 
 void predecon::setDistanceMetric(DistanceMetric m) {
@@ -143,11 +168,6 @@ std::vector<std::string> predecon::calculateENeighbours(sample p) {
 	std::vector<std::string> neighbours;
 	for (sample q : data) if (calculateDistance(p, q) <= epsilon) neighbours.push_back(q.getId());
 	return neighbours;
-}
-
-void predecon::printENeighbours() {
-	printf("Data\tE-neighbours\n");
-	for (int i = 0; i < data.size(); i++) printf("%s\t%s\n", data[i].getId().c_str(), std::accumulate(e_neighbours[i].begin(), e_neighbours[i].end(), std::string("")).c_str());
 }
 
 void predecon::calculateVariances() {
@@ -199,6 +219,12 @@ float predecon::calculateWeightedDistance(sample p, sample q, std::vector<float>
 	switch(distance_metric){
 		case Euclidean:
 			return calculateWeightedDistanceEuclidean(p, q, w);
+		case Minkowsky1:
+			return calculateWeightedDistanceMinkowsky1(p, q, w);
+		case Minkowsky2:
+			return calculateWeightedDistanceMinkowsky2(p, q, w);
+		case MinkowskyInf:
+			return calculateWeightedDistanceMinkowskyInf(p, q, w);
 		default:
 			return 0;
 	}
@@ -206,8 +232,26 @@ float predecon::calculateWeightedDistance(sample p, sample q, std::vector<float>
 
 float predecon::calculateWeightedDistanceEuclidean(sample p, sample q, std::vector<float> w) {
 	float distance = 0;
-	for (int i = 0; i < attribute_amount; i++) distance += w[i]*pow(p.getAttribute(i) - q.getAttribute(i), 2.0);
+	for (int i = 0; i < attribute_amount; i++) distance += w[i] * pow(p.getAttribute(i) - q.getAttribute(i), 2.0);
 	return pow(distance, 0.5);
+}
+
+float predecon::calculateWeightedDistanceMinkowsky1(sample p, sample q, std::vector<float> w) {
+	float distance = 0;
+	for (int i = 0; i < attribute_amount; i++) distance += w[i] * abs(p.getAttribute(i) - q.getAttribute(i));
+	return distance;
+}
+
+float predecon::calculateWeightedDistanceMinkowsky2(sample p, sample q, std::vector<float> w) {
+	float distance = 0;
+	for (int i = 0; i < attribute_amount; i++) distance += w[i] * pow(abs(p.getAttribute(i) - q.getAttribute(i)), 2.0);
+	return pow(distance, 0.5);
+}
+
+float predecon::calculateWeightedDistanceMinkowskyInf(sample p, sample q, std::vector<float> w) {
+	float distance = 0;
+	for (int i = 0; i < attribute_amount; i++) distance = std::max(w[i] * abs(p.getAttribute(i) - q.getAttribute(i)), distance);
+	return distance;
 }
 
 void predecon::solve() {
@@ -302,4 +346,26 @@ int predecon::calculateSubspacePreferenceDimensionality(int id) {
 	int dim = 0;
 	for (float value : subspace_preference_vectors[id]) if (value == kappa) dim++;
 	return dim;
+}
+
+void predecon::plotData() {
+	if (attribute_amount == 2){
+		std::vector<float> x, y;
+		for (int i = 0; i < data.size(); i++) {
+			x.push_back(data[i].getAttribute(0));
+			y.push_back(data[i].getAttribute(1));
+		}
+		matplotlibcpp::plot(x, y, "*");
+		if (!subspace_preference_vectors.empty() && distance_metric == Euclidean || distance_metric == Minkowsky2) for (int i = 0; i < data.size(); i++) {
+			std::vector<float> elipse_x, elipse_y;
+			for (float angle = 0; angle <= 2*M_PI; angle += 2*M_PI/360) {
+				elipse_x.push_back(cos(angle)*epsilon/pow(subspace_preference_vectors[i][0], 0.5) + x[i]);
+				elipse_y.push_back(sin(angle)*epsilon/pow(subspace_preference_vectors[i][1], 0.5) + y[i]);
+			}
+			matplotlibcpp::plot(elipse_x, elipse_y, "r");
+		}
+		if (!cluster.empty()) for (int i = 0; i < cluster.size(); i++) matplotlibcpp::text(x[i], y[i], data[i].getId() + "|" + std::to_string(cluster[i]));
+		matplotlibcpp::axis("equal");
+		matplotlibcpp::show();
+	}
 }

@@ -2,6 +2,7 @@
 Data clustering solver using PreDeCon algorythm
 
 ## Building
+'matplotlib-cpp' package is required!
 ```
 mkdir build
 cd build

@@ -30,11 +30,17 @@ private:
 	std::vector<std::string> calculateENeighbours(sample);
 	float calculateDistance(sample, sample);
 	float calculateDistanceEuclidean(sample, sample);
+	float calculateDistanceMinkowsky1(sample, sample);
+	float calculateDistanceMinkowsky2(sample, sample);
+	float calculateDistanceMinkowskyInf(sample, sample);
 	std::vector<float> calculateVariances(sample, std::vector<std::string>);
 	std::vector<float> calculateSubspacePreferenceVectors(std::vector<float>);
 	std::vector<std::string> calculatePreferenceWeightedENeighbours(sample, std::vector<float>);
 	float calculateWeightedDistance(sample, sample, std::vector<float>);
 	float calculateWeightedDistanceEuclidean(sample, sample, std::vector<float>);
+	float calculateWeightedDistanceMinkowsky1(sample, sample, std::vector<float>);
+	float calculateWeightedDistanceMinkowsky2(sample, sample, std::vector<float>);
+	float calculateWeightedDistanceMinkowskyInf(sample, sample, std::vector<float>);
 	bool isCore(int);
 	bool isNoise(int);
 	int calculateSubspacePreferenceDimensionality(int);
@@ -47,9 +53,9 @@ public:
 	void printData(bool waitForInput = false);
 	void setDistanceMetric(DistanceMetric);
 	void calculateENeighbours();
-	void printENeighbours();
 	void calculateVariances();
 	void calculateSubspacePreferenceVectors();
 	void calculatePreferenceWeightedENeighbours();
 	void solve();
+	void plotData();
 };
