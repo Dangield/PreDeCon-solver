@@ -24,13 +24,25 @@ set(SAMPLE_SOURCES src/sample.cpp)
 add_library(samples ${SAMPLE_SOURCES})
 target_include_directories(samples PUBLIC include)
 
-set(PREDECON_SOURCES src/predecon.cpp)
-add_library(predecon ${PREDECON_SOURCES})
-target_include_directories(predecon PUBLIC include)
-target_link_libraries(predecon samples matplotlib_cpp)
+set(DBSCAN_SOURCES src/dbscan.cpp)
+add_library(dbscan ${DBSCAN_SOURCES})
+target_include_directories(dbscan PUBLIC include)
+target_link_libraries(dbscan samples)
+
+# set(PREDECON_SOURCES src/predecon.cpp)
+# add_library(predecon ${PREDECON_SOURCES})
+# target_include_directories(predecon PUBLIC include)
+# target_link_libraries(predecon samples matplotlib_cpp)
 
 # add the executable
-set(SOURCES src/main.cpp)
-add_executable(main ${SOURCES})
-target_include_directories(main PUBLIC include)
-target_link_libraries(main predecon)
+# set(SOURCES src/main.cpp)
+# add_executable(main ${SOURCES})
+# target_include_directories(main PUBLIC include)
+# target_link_libraries(main predecon)
+
+set(SOURCES src/run_dbscan.cpp)
+add_executable(run_dbscan ${SOURCES})
+target_include_directories(run_dbscan PUBLIC include)
+target_link_libraries(run_dbscan dbscan)
+
+add_executable(DIM512 src/prepare_dim512.cpp)

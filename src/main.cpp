@@ -7,6 +7,7 @@ int main(int argc, char const *argv[])
 	solver.loadDataFromFile(filename);
 	// solver.setParameters(2, 0.625, 2, 2, 10.0);
 	solver.setParameters(3, 0.625, 2, 2, 10.0);
+	solver.setParameters(3, 0.625, 2, 4, 10.0);
 	// solver.setParameters(2, 0.3, 2, 2, 10.0);
 	solver.setDistanceMetric(Minkowsky2);
 	solver.calculateENeighbours();

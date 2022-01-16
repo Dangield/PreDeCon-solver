@@ -4,15 +4,14 @@
 class sample
 {
 private:
-	std::string id;
+	int id;
 	std::vector<float> attribute_values;
 	static int global_id;
 public:
 	sample();
-	sample(std::string);
 	~sample();
 	void pushAttribute(float);
-	std::string getId();
+	int getId();
 	std::vector<float> getAttributes();
 	float getAttribute(int);
 	int getAttributeAmount();

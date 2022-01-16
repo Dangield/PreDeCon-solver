@@ -7,11 +7,6 @@ sample::sample(){
 	global_id++;
 }
 
-sample::sample(std::string id_n) {
-	id = id_n;
-	global_id++;
-}
-
 sample::~sample(){
 }
 
@@ -19,7 +14,7 @@ void sample::pushAttribute(float value) {
 	attribute_values.push_back(value);
 }
 
-std::string sample::getId() {
+int sample::getId() {
 	return id;
 }
 
