@@ -10,14 +10,14 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 # for matplotlib-cpp
-find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+# find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 
-add_library(matplotlib_cpp INTERFACE)
-target_include_directories(matplotlib_cpp
-  INTERFACE
-    ../matplotlib-cpp
-)
-target_link_libraries(matplotlib_cpp INTERFACE Python3::Python Python3::Module Python3::NumPy)
+# add_library(matplotlib_cpp INTERFACE)
+# target_include_directories(matplotlib_cpp
+#   INTERFACE
+#     ../matplotlib-cpp
+# )
+# target_link_libraries(matplotlib_cpp INTERFACE Python3::Python Python3::Module Python3::NumPy)
 
 # build libraries
 set(SAMPLE_SOURCES src/sample.cpp)
@@ -29,10 +29,10 @@ add_library(dbscan ${DBSCAN_SOURCES})
 target_include_directories(dbscan PUBLIC include)
 target_link_libraries(dbscan samples)
 
-# set(PREDECON_SOURCES src/predecon.cpp)
-# add_library(predecon ${PREDECON_SOURCES})
-# target_include_directories(predecon PUBLIC include)
-# target_link_libraries(predecon samples matplotlib_cpp)
+set(PREDECON_SOURCES src/predecon.cpp)
+add_library(predecon ${PREDECON_SOURCES})
+target_include_directories(predecon PUBLIC include)
+target_link_libraries(predecon samples)
 
 # add the executable
 # set(SOURCES src/main.cpp)
@@ -40,9 +40,14 @@ target_link_libraries(dbscan samples)
 # target_include_directories(main PUBLIC include)
 # target_link_libraries(main predecon)
 
-set(SOURCES src/run_dbscan.cpp)
-add_executable(run_dbscan ${SOURCES})
+set(RUN_DBSCAN_SOURCES src/run_dbscan.cpp)
+add_executable(run_dbscan ${RUN_DBSCAN_SOURCES})
 target_include_directories(run_dbscan PUBLIC include)
 target_link_libraries(run_dbscan dbscan)
+
+set(RUN_PREDECON_SOURCES src/run_predecon.cpp)
+add_executable(run_predecon ${RUN_PREDECON_SOURCES})
+target_include_directories(run_predecon PUBLIC include)
+target_link_libraries(run_predecon predecon)
 
 add_executable(DIM512 src/prepare_dim512.cpp)

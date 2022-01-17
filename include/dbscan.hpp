@@ -41,6 +41,6 @@ class dbscan {
 		void setParameters(float, int);
 		void setEpsilon(float);
 		void setMinPts(int);
-		void setMiknowskiOrder(DistanceMetric);
+		void setMinkowskiOrder(DistanceMetric);
 		void run(std::string);
 };

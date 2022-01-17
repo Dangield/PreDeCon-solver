@@ -34,3 +34,8 @@
 # Folders
 build/*
 bin/*
+
+# Files beginning with
+OUT_*
+DEBUG_*
+STAT_*

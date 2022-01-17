@@ -15,7 +15,7 @@ int main(int argc, char const *argv[])
 				i++;
 			}
 			if (!strcmp(argv[i], "-m_order")) {
-				solver.setMiknowskiOrder(DistanceMetric(std::stoi(argv[i+1])));
+				solver.setMinkowskiOrder(DistanceMetric(std::stoi(argv[i+1])));
 				i++;
 			}
 

@@ -39,7 +39,7 @@ void dbscan::setMinPts(int m) {
 	printf("Setting DBSCAN parameters: minPts %d\n", minPts);
 }
 
-void dbscan::setMiknowskiOrder(DistanceMetric m) {
+void dbscan::setMinkowskiOrder(DistanceMetric m) {
 	metric = m;
 	if (metric == 1) printf("Setting distance metric to: Minkowski1\n");
 	else if (metric == 2) printf("Setting distance metric to: Minkowski2\n");
@@ -310,7 +310,7 @@ void dbscan::writeSTATFile() {
 		file << "Number of dimensions of a point: " << attribute_amount << "\n";
 		file << "Number of points: " << sample_amount << "\n";
 		file << "Reading a file runtime[us]: " << file_read_time - start_time << "\n";
-		file << "Calculating epsilon naighbours runtime[us]: " << calculate_e_neighbours_time - file_read_time << "\n";
+		file << "Calculating epsilon neighbours runtime[us]: " << calculate_e_neighbours_time - file_read_time << "\n";
 		file << "Clustering runtime[us]: " << clustering_time - calculate_e_neighbours_time << "\n";
 		file << "Calculating RAND measure runtime[us]: " << calculate_rand_time - clustering_time << "\n";
 		file << "Calculating Purity measure runtime[us]: " << calculate_purity_time - calculate_rand_time << "\n";
