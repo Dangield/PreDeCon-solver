@@ -309,6 +309,8 @@ void dbscan::writeSTATFile() {
 		file << "Input file: " << filename << "\n";
 		file << "Number of dimensions of a point: " << attribute_amount << "\n";
 		file << "Number of points: " << sample_amount << "\n";
+		file << "Epsilon: " << epsilon << "\n";
+		file << "minPts: " << minPts << "\n";
 		file << "Reading a file runtime[us]: " << file_read_time - start_time << "\n";
 		file << "Calculating epsilon neighbours runtime[us]: " << calculate_e_neighbours_time - file_read_time << "\n";
 		file << "Clustering runtime[us]: " << clustering_time - calculate_e_neighbours_time << "\n";

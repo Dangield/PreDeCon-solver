@@ -30,7 +30,10 @@ int main(int argc, char const *argv[])
 				solver.setMinkowskiOrder(DistanceMetric(std::stoi(argv[i+1])));
 				i++;
 			}
-
+			if (!strcmp(argv[i], "-ti")) {
+				solver.useTI(true);
+				i++;
+			}
 		}
 	}
 	solver.run(argv[1]);

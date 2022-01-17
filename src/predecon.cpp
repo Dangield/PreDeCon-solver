@@ -19,8 +19,9 @@ predecon::predecon() {
 	delta = 0;
 	lambda = 0;
 	mi = 0;
-	kappa = 00;
+	kappa = 0;
 	metric = Minkowski2;
+	use_TI = false;
 	printf("Predecon solver initialized\n");
 }
 
@@ -32,9 +33,22 @@ void predecon::run(std::string fname) {
 	readFile(fname);
 	file_read_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
 	printf("Time spent: %ld\n",file_read_time - start_time);
-	calculateENeighbours();
-	calculate_e_neighbours_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
-	printf("Time spent: %ld\n",calculate_e_neighbours_time - file_read_time);
+	if (use_TI) {
+		reference_point = std::vector<float>(attribute_amount, 0);
+		calculateReferencePointDistances();
+		calculate_reference_point_distance_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
+		printf("Time spent: %ld\n",calculate_reference_point_distance_time - file_read_time);
+		sortData();
+		sort_data_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
+		printf("Time spent: %ld\n",sort_data_time - calculate_reference_point_distance_time);
+		calculateENeighboursTI();
+		calculate_e_neighbours_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
+		printf("Time spent: %ld\n",calculate_e_neighbours_time - sort_data_time);
+	} else {
+		calculateENeighbours();
+		calculate_e_neighbours_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
+		printf("Time spent: %ld\n",calculate_e_neighbours_time - file_read_time);
+	}
 	calculateVariances();
 	calculate_variances_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
 	printf("Time spent: %ld\n",calculate_variances_time - calculate_e_neighbours_time);
@@ -106,6 +120,10 @@ void predecon::setMinkowskiOrder(DistanceMetric m) {
 	else if (metric == 2) printf("Setting distance metric to: Minkowski2\n");
 	else if (metric == 0) printf("Setting distance metric to: MinkowskiInf\n");
 	else printf("Warning: unknown distance metric set\n");
+}
+
+void predecon::useTI(bool ti) {
+	use_TI = ti;
 }
 
 void predecon::readFile(std::string fname){
@@ -236,6 +254,75 @@ float predecon::calculateDistance(int p, int q) {
 		for (int i = 0; i < attribute_amount; i++) distance = std::max(std::abs(data[p].getAttribute(i) - data[q].getAttribute(i)), distance);
 		return distance;
 	}
+}
+
+void predecon::calculateReferencePointDistances() {
+	for (int i = 0; i < sample_amount; i++) {
+		reference_point_distance.push_back(calculateDistanceToReferencePoint(i));
+	}
+	printf("Calculated distance to reference point\n");
+}
+
+float predecon::calculateDistanceToReferencePoint(int p) {
+	float distance = 0;
+	if (metric == Minkowski2){
+		for (int i = 0; i < attribute_amount; i++) distance += pow(data[p].getAttribute(i) - reference_point[i], 2.0);
+		return pow(distance, 0.5);
+	} else if (metric == Minkowski1) {
+		for (int i = 0; i < attribute_amount; i++) distance += abs(data[p].getAttribute(i) - reference_point[i]);
+		return distance;
+	} else if (metric == MinkowskiInf) {
+		for (int i = 0; i < attribute_amount; i++) distance = std::max(std::abs(data[p].getAttribute(i) - reference_point[i]), distance);
+		return distance;
+	}
+}
+
+void predecon::sortData() {
+	std::vector<float> temp = reference_point_distance;
+	std::sort(temp.begin(), temp.end());
+	for (float d : temp) {
+		for (int i = 0; i < sample_amount; i++) {
+			if (reference_point_distance[i] == d) {
+				if (sorted_data.size() == 0) sorted_data.push_back(data[i]);
+				else {
+					bool s_in_ds = false;
+					for (sample s : sorted_data) {
+						if (s.getId() == i) {
+							s_in_ds = true;
+							break;
+						}
+					}
+					if (s_in_ds) continue;
+					else (sorted_data.push_back(data[i]));
+				}
+			}
+		}
+	}
+	// for (int i = 0; i < sample_amount; i++) printf("%d %f\n", sorted_data[i].getId(), reference_point_distance[sorted_data[i].getId()]);
+	printf("Data sorted due to reference point distance\n");
+}
+
+void predecon::calculateENeighboursTI() {
+	for (int i = 0; i < sample_amount; i++) {
+		e_neighbours.push_back(std::vector<int>(1, i));
+		num_of_distance_calc.push_back(0);
+	}
+	for (int p = 0; p < sample_amount; p++) {
+		std::cout << p << '\r';
+		for (int q = p + 1; q < sample_amount; q++) {
+			num_of_distance_calc[sorted_data[p].getId()]++;
+			num_of_distance_calc[sorted_data[q].getId()]++;
+			if (reference_point_distance[sorted_data[q].getId()] - reference_point_distance[sorted_data[p].getId()] <= epsilon) {
+				e_neighbours[sorted_data[p].getId()].push_back(sorted_data[q].getId());
+				e_neighbours[sorted_data[q].getId()].push_back(sorted_data[p].getId());
+			} else break;
+		}
+	}
+	// for (int i = 0; i < sample_amount; i++) {
+	// 	for (int n : e_neighbours[i]) printf("%i ", n);
+	// 	printf("\n");
+	// }
+	printf("Calculated neighbours for the data using TI\n");	
 }
 
 // void predecon::printParameters() {
@@ -714,8 +801,8 @@ void predecon::writeOUTFile() {
 	std::ofstream file;
 	std::string out_fname("OUT_PREDECON_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
 		std::to_string(sample_amount) + "_e" + std::to_string(epsilon) + "_d" + std::to_string(delta) + "_l" + std::to_string(lambda) +
-		"_k" + std::to_string(kappa) + "_m" + std::to_string(mi) + "_mink" +
-		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + ".csv");
+		"_m" + std::to_string(mi) + "_k" + std::to_string(kappa) + "_mink" +
+		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? "_r0" : "") + ".csv");
 	file.open(out_fname);
 	if (file.is_open()){
 		file << "point id, ";
@@ -735,13 +822,13 @@ void predecon::writeDEBUGFile() {
 	std::ofstream file;
 	std::string out_fname("DEBUG_predecon_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
 		std::to_string(sample_amount) + "_e" + std::to_string(epsilon) + "_d" + std::to_string(delta) + "_l" + std::to_string(lambda) +
-		"_k" + std::to_string(kappa) + "_m" + std::to_string(mi) + "_mink" +
-		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + ".csv");
+		"_m" + std::to_string(mi) + "_k" + std::to_string(kappa) + "_mink" +
+		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? "_r0" : "") + ".csv");
 	file.open(out_fname);
 	if (file.is_open()){
 		file << "point id, |eps_neighbourhood|, |preference weighted eps_neighbourhood|, PDIM, variance vector\n";
 		for (int i = 0; i < sample_amount; i++){
-			file << data[i].getId() << ", " << e_neighbours[i].size() << ", " << preference_weighted_e_neighbours.size() <<
+			file << data[i].getId() << ", " << e_neighbours[i].size() << ", " << preference_weighted_e_neighbours[i].size() <<
 			", " << calculateSubspacePreferenceDimensionality(i) << ", [";
 			for (float v : variances[i]) file << v << ", ";
 			file << "]\n";
@@ -755,15 +842,31 @@ void predecon::writeSTATFile() {
 	std::ofstream file;
 	std::string out_fname("STAT_predecon_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
 		std::to_string(sample_amount) + "_e" + std::to_string(epsilon) + "_d" + std::to_string(delta) + "_l" + std::to_string(lambda) +
-		"_k" + std::to_string(kappa) + "_m" + std::to_string(mi) + "_mink" +
-		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + ".csv");
+		"_m" + std::to_string(mi) + "_k" + std::to_string(kappa) + "_mink" +
+		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? "_r0" : "") + ".csv");
 	file.open(out_fname);
 	if (file.is_open()){
 		file << "Input file: " << filename << "\n";
 		file << "Number of dimensions of a point: " << attribute_amount << "\n";
 		file << "Number of points: " << sample_amount << "\n";
+		file << "Epsilon: " << epsilon << "\n";
+		file << "Delta: " << delta << "\n";
+		file << "Lambda: " << lambda << "\n";
+		file << "Mi: " << mi << "\n";
+		file << "Kappa: " << kappa << "\n";
+		if (use_TI) {
+			file << "Reference point: ";
+			for (float v : reference_point) file << v << " ";
+				file << "\n";
+		}
 		file << "Reading a file runtime[us]: " << file_read_time - start_time << "\n";
-		file << "Calculating epsilon neighbours runtime[us]: " << calculate_e_neighbours_time - file_read_time << "\n";
+		if (use_TI) {
+			file << "Calculating distance to reference point runtime[us]: " << calculate_reference_point_distance_time - file_read_time << "\n";
+			file << "Sorting data due to reference point distance runtime [us]: " << sort_data_time - calculate_reference_point_distance_time << "\n";
+			file << "Calculating epsilon neighbours with TI runtime[us]: " << calculate_e_neighbours_time - sort_data_time << "\n";
+		} else {
+			file << "Calculating epsilon neighbours runtime[us]: " << calculate_e_neighbours_time - file_read_time << "\n";
+		}
 		file << "Calculating variances runtime[us]: " << calculate_variances_time - calculate_e_neighbours_time << "\n";
 		file << "Calculating subspace preference vectors runtime[us]: " << calculate_subspace_preference_vectors_time - calculate_variances_time << "\n";
 		file << "Calculating preference weighted epsilon neighbours runtime[us]: " << calculate_preference_weighted_e_neighbours_time - calculate_subspace_preference_vectors_time << "\n";

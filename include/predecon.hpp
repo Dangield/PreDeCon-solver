@@ -37,6 +37,11 @@ private:
 	// std::vector<Property> core;
 	// std::vector<int> cluster;
 	// std::vector<int> queue_theta, queue_R;
+	bool use_TI;
+	std::vector<float> reference_point;
+	std::vector<float> reference_point_distance;
+	std::vector<sample> sorted_data;
+	int64_t calculate_reference_point_distance_time, sort_data_time;
 
 	void readFile(std::string);
 	void calculateENeighbours();
@@ -70,6 +75,10 @@ private:
 	void calculateRand();
 	void calculatePurity();
 	void calculateSilhouetteCoefficient();
+	void calculateReferencePointDistances();
+	float calculateDistanceToReferencePoint(int);
+	void sortData();
+	void calculateENeighboursTI();
 public:
 	predecon();
 	~predecon();
@@ -80,6 +89,7 @@ public:
 	void setMi(int);
 	void setKappa(float);
 	void setMinkowskiOrder(DistanceMetric);
+	void useTI(bool);
 	// void printParameters();
 	// void loadDataFromFile(std::string, bool dataHasIds = true);
 	// void printData(bool waitForInput = false);
