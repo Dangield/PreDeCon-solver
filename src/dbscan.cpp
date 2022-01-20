@@ -290,9 +290,11 @@ void dbscan::writeDEBUGFile() {
 		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + ".csv");
 	file.open(out_fname);
 	if (file.is_open()){
-		file << "point id, size of eps_neighbourhood\n";
+		file << "point id, |eps_neighbourhood|, eps_neighbours\n";
 		for (int i = 0; i < sample_amount; i++){
-			file << data[i].getId() << ", " << e_neighbours[i].size() << "\n";
+			file << data[i].getId() << ", " << e_neighbours[i].size() << ", [";
+			for (int n : e_neighbours[i]) file << n << (n != e_neighbours[i].back() ? "," : "");
+			file << "]\n";
 		}
 		file.close();
 	}
@@ -340,6 +342,8 @@ void dbscan::writeSTATFile() {
 		file << "RAND: " << rand << "\n";
 		file << "Purity: " << purity << "\n";
 		file << "Silhouette Coefficient: " << silhouette_coefficient << "\n";
+		write_stat_file_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
+		file << "Writing to STAT file runtime[us]: " << write_stat_file_time - write_debug_file_time << "\n";
 		file.close();
 	}
 	printf("STAT file created\n");

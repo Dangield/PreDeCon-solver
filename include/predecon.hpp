@@ -1,10 +1,7 @@
 #include <string>
 #include <vector>
 #include "sample.hpp"
-
-enum DistanceMetric {MinkowskiInf, Minkowski1, Minkowski2};
-// enum Property {Unknown, Core, Noise};
-// static std::string property_strings[] = {"?", "Core", "Noise"};
+#include "distance.hpp"
 
 class predecon
 {
@@ -23,7 +20,7 @@ private:
 		calculate_variances_time, calculate_subspace_preference_vectors_time,
 		calculate_preference_weighted_e_neighbours_time, clustering_time,
 		calculate_rand_time, calculate_purity_time, calculate_silhouette_coefficient_time,
-		write_out_file_time, write_debug_file_time;
+		write_out_file_time, write_debug_file_time, write_stat_file_time;
 	DistanceMetric metric;
 	std::vector<std::vector<int>> e_neighbours;
 	std::vector<std::vector<float>> variances;
@@ -34,9 +31,6 @@ private:
 	std::vector<int> original_int_cluster_id;
 	int tp, tn, pairs;
 	float rand, purity, silhouette_coefficient;
-	// std::vector<Property> core;
-	// std::vector<int> cluster;
-	// std::vector<int> queue_theta, queue_R;
 	bool use_TI;
 	std::vector<float> reference_point;
 	std::vector<float> reference_point_distance;
@@ -53,21 +47,7 @@ private:
 	void calculatePreferenceWeightedENeighbours(int);
 	float calculateWeightedDistance(int, int);
 	void performClustering();
-	// float calculateDistance(sample, sample);
-	// float calculateDistanceEuclidean(sample, sample);
-	// float calculateDistanceMinkowsky1(sample, sample);
-	// float calculateDistanceMinkowsky2(sample, sample);
-	// float calculateDistanceMinkowskyInf(sample, sample);
-	// std::vector<float> calculateVariances(sample, std::vector<std::string>);
-	// std::vector<float> calculateSubspacePreferenceVectors(std::vector<float>);
-	// std::vector<std::string> calculatePreferenceWeightedENeighbours(sample, std::vector<float>);
-	// float calculateWeightedDistance(sample, sample, std::vector<float>);
-	// float calculateWeightedDistanceEuclidean(sample, sample, std::vector<float>);
-	// float calculateWeightedDistanceMinkowsky1(sample, sample, std::vector<float>);
-	// float calculateWeightedDistanceMinkowsky2(sample, sample, std::vector<float>);
-	// float calculateWeightedDistanceMinkowskyInf(sample, sample, std::vector<float>);
 	bool isCore(int);
-	// bool isNoise(int);
 	int calculateSubspacePreferenceDimensionality(int);
 	void writeOUTFile();
 	void writeSTATFile();
@@ -90,15 +70,5 @@ public:
 	void setKappa(float);
 	void setMinkowskiOrder(DistanceMetric);
 	void useTI(bool);
-	// void printParameters();
-	// void loadDataFromFile(std::string, bool dataHasIds = true);
-	// void printData(bool waitForInput = false);
-	// void setDistanceMetric(DistanceMetric);
-	// void calculateENeighbours();
-	// void calculateVariances();
-	// void calculateSubspacePreferenceVectors();
-	// void calculatePreferenceWeightedENeighbours();
-	// void solve();
-	// void plotData();
 	void run(std::string);
 };

@@ -1,6 +1,9 @@
 #include <vector>
 #include <string>
 
+#ifndef SAMPLE_H
+#define SAMPLE_H
+
 class sample
 {
 private:
@@ -16,3 +19,5 @@ public:
 	float getAttribute(int);
 	int getAttributeAmount();
 };
+
+#endif
