@@ -36,6 +36,7 @@ private:
 	std::vector<float> reference_point_distance;
 	std::vector<sample> sorted_data;
 	int64_t calculate_reference_point_distance_time, sort_data_time;
+	bool use_r_max;
 
 	void readFile(std::string);
 	void calculateENeighbours();
@@ -70,5 +71,6 @@ public:
 	void setKappa(float);
 	void setMinkowskiOrder(DistanceMetric);
 	void useTI(bool);
+	void useRMax(bool);
 	void run(std::string);
 };

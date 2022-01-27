@@ -201,7 +201,7 @@ float dbscan::calculateDistance(int p, int q) {
 		for (int i = 0; i < attribute_amount; i++) distance += pow(data[p].getAttribute(i) - data[q].getAttribute(i), 2.0);
 		return pow(distance, 0.5);
 	} else if (metric == Minkowski1) {
-		for (int i = 0; i < attribute_amount; i++) distance += abs(data[p].getAttribute(i) - data[q].getAttribute(i));
+		for (int i = 0; i < attribute_amount; i++) distance += std::abs(data[p].getAttribute(i) - data[q].getAttribute(i));
 		return distance;
 	} else if (metric == MinkowskiInf) {
 		for (int i = 0; i < attribute_amount; i++) distance = std::max(std::abs(data[p].getAttribute(i) - data[q].getAttribute(i)), distance);
@@ -393,12 +393,12 @@ void dbscan::calculateRand() {
 	tp = 0;
 	tn = 0;
 	for (int p = 0; p < sample_amount; p++) {
-		for (int q = p; q < sample_amount; q++) {
+		for (int q = p + 1; q < sample_amount; q++) {
 			if (original_int_cluster_id[p] == original_int_cluster_id[q] && cluster_id[p] == cluster_id[q]) tp++;
 			if (original_int_cluster_id[p] != original_int_cluster_id[q] && cluster_id[p] != cluster_id[q]) tn++;
 		}
 	}
-	rand = (tp + tn)/pairs;
+	rand = ((float)tp + (float)tn)/(float)pairs;
 	printf("Calculated RAND\n");
 }
 
@@ -431,26 +431,31 @@ void dbscan::calculateSilhouetteCoefficient() {
 	}
 	float a, b, b_cluster, s;
 	for (int i = 0; i < sample_amount; i++) {
-		if (cluster_id[i] == -1) continue;
-		a = 0;
-		b = 0;
-		// calculate a
-		for (int j = 0; j < sample_amount; j++) {
-			if (i == j) continue;
-			if (cluster_id[i] == cluster_id[j]) a += calculateDistance(i, j)/(num_of_points_in_cluster[cluster_id[i]] - 1);
-		}
-		// calculate b
-		for (int c = 1; c < original_cluster_id.size() + 1; c++) {
-			if (c == cluster_id[i]) continue;
-			b_cluster = 0;
+		if (cluster_id[i] == -1) s = 0;
+		else
+		{
+			a = 0;
+			b = 0;
+			// calculate a
 			for (int j = 0; j < sample_amount; j++) {
-				if (cluster_id[j] == c) b_cluster += calculateDistance(i, j)/num_of_points_in_cluster[c];
+				if (i == j) continue;
+				if (cluster_id[i] == cluster_id[j]) a += calculateDistance(i, j)/(num_of_points_in_cluster[cluster_id[i]] - 1);
 			}
-			if (b == 0) b = b_cluster;
-			else b = std::min(b, b_cluster);
+			// calculate b
+			for (int c = 1; c < current_cluster_id + 1; c++) {
+				if (c == cluster_id[i]) continue;
+				b_cluster = 0;
+				for (int j = 0; j < sample_amount; j++) {
+					if (cluster_id[j] == c) b_cluster += calculateDistance(i, j)/num_of_points_in_cluster[c];
+				}
+				b = std::min(b, b_cluster);
+			}
+			for (int j = 0; j< sample_amount; j++) {
+				if (cluster_id[j] == -1) b = std::min(b, calculateDistance(i, j));
+			}
+			s = (b - a)/std::max(a, b);
 		}
-		s = (b - a)/std::max(a, b);
-		silhouette_coefficient = std::max(silhouette_coefficient, s);
+		silhouette_coefficient += s/sample_amount;
 	}
 	printf("Calculated Silhouette Coefficient\n");
 }

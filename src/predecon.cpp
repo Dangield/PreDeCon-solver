@@ -22,6 +22,7 @@ predecon::predecon() {
 	kappa = 0;
 	metric = Minkowski2;
 	use_TI = false;
+	use_r_max = false;
 	printf("Predecon solver initialized\n");
 }
 
@@ -35,6 +36,14 @@ void predecon::run(std::string fname) {
 	printf("Time spent: %ld\n",file_read_time - start_time);
 	if (use_TI) {
 		reference_point = std::vector<float>(attribute_amount, 0);
+		if (use_r_max) {
+			for (int a = 0; a < attribute_amount; a++) {
+				reference_point[a] = data[0].getAttribute(a);
+				for (int s = 1; s < sample_amount; s++) {
+					reference_point[a] = std::max(reference_point[a], data[s].getAttribute(a));
+				}
+			}
+		}
 		calculateReferencePointDistances();
 		calculate_reference_point_distance_time = duration_cast<microseconds>(system_clock::now().time_since_epoch()).count();
 		printf("Time spent: %ld\n",calculate_reference_point_distance_time - file_read_time);
@@ -124,6 +133,10 @@ void predecon::setMinkowskiOrder(DistanceMetric m) {
 
 void predecon::useTI(bool ti) {
 	use_TI = ti;
+}
+
+void predecon::useRMax(bool rmax) {
+	use_r_max = rmax;
 }
 
 void predecon::readFile(std::string fname){
@@ -248,7 +261,7 @@ float predecon::calculateDistance(int p, int q) {
 		for (int i = 0; i < attribute_amount; i++) distance += pow(data[p].getAttribute(i) - data[q].getAttribute(i), 2.0);
 		return pow(distance, 0.5);
 	} else if (metric == Minkowski1) {
-		for (int i = 0; i < attribute_amount; i++) distance += abs(data[p].getAttribute(i) - data[q].getAttribute(i));
+		for (int i = 0; i < attribute_amount; i++) distance += std::abs(data[p].getAttribute(i) - data[q].getAttribute(i));
 		return distance;
 	} else if (metric == MinkowskiInf) {
 		for (int i = 0; i < attribute_amount; i++) distance = std::max(std::abs(data[p].getAttribute(i) - data[q].getAttribute(i)), distance);
@@ -269,7 +282,7 @@ float predecon::calculateDistanceToReferencePoint(int p) {
 		for (int i = 0; i < attribute_amount; i++) distance += pow(data[p].getAttribute(i) - reference_point[i], 2.0);
 		return pow(distance, 0.5);
 	} else if (metric == Minkowski1) {
-		for (int i = 0; i < attribute_amount; i++) distance += abs(data[p].getAttribute(i) - reference_point[i]);
+		for (int i = 0; i < attribute_amount; i++) distance += std::abs(data[p].getAttribute(i) - reference_point[i]);
 		return distance;
 	} else if (metric == MinkowskiInf) {
 		for (int i = 0; i < attribute_amount; i++) distance = std::max(std::abs(data[p].getAttribute(i) - reference_point[i]), distance);
@@ -280,23 +293,31 @@ float predecon::calculateDistanceToReferencePoint(int p) {
 void predecon::sortData() {
 	std::vector<float> temp = reference_point_distance;
 	std::sort(temp.begin(), temp.end());
+	// for (float d : temp) {
+	// 	for (int i = 0; i < sample_amount; i++) {
+	// 		if (reference_point_distance[i] == d) {
+	// 			if (sorted_data.size() == 0) sorted_data.push_back(data[i]);
+	// 			else {
+	// 				bool s_in_ds = false;
+	// 				for (sample s : sorted_data) {
+	// 					if (s.getId() == i) {
+	// 						s_in_ds = true;
+	// 						break;
+	// 					}
+	// 				}
+	// 				if (s_in_ds) continue;
+	// 				else (sorted_data.push_back(data[i]));
+	// 			}
+	// 		}
+	// 	}
+	// }
+	float prev_d = -1;
 	for (float d : temp) {
+		if (d == prev_d) continue;
 		for (int i = 0; i < sample_amount; i++) {
-			if (reference_point_distance[i] == d) {
-				if (sorted_data.size() == 0) sorted_data.push_back(data[i]);
-				else {
-					bool s_in_ds = false;
-					for (sample s : sorted_data) {
-						if (s.getId() == i) {
-							s_in_ds = true;
-							break;
-						}
-					}
-					if (s_in_ds) continue;
-					else (sorted_data.push_back(data[i]));
-				}
-			}
+			if (reference_point_distance[i] == d) sorted_data.push_back(data[i]);
 		}
+		prev_d = d;
 	}
 	// for (int i = 0; i < sample_amount; i++) printf("%d %f\n", sorted_data[i].getId(), reference_point_distance[sorted_data[i].getId()]);
 	printf("Data sorted due to reference point distance\n");
@@ -313,8 +334,10 @@ void predecon::calculateENeighboursTI() {
 			num_of_distance_calc[sorted_data[p].getId()]++;
 			num_of_distance_calc[sorted_data[q].getId()]++;
 			if (reference_point_distance[sorted_data[q].getId()] - reference_point_distance[sorted_data[p].getId()] <= epsilon) {
-				e_neighbours[sorted_data[p].getId()].push_back(sorted_data[q].getId());
-				e_neighbours[sorted_data[q].getId()].push_back(sorted_data[p].getId());
+				if (calculateDistance(sorted_data[q].getId(), sorted_data[p].getId()) <= epsilon) {
+					e_neighbours[sorted_data[p].getId()].push_back(sorted_data[q].getId());
+					e_neighbours[sorted_data[q].getId()].push_back(sorted_data[p].getId());
+				}
 			} else break;
 		}
 	}
@@ -383,7 +406,7 @@ float predecon::calculateWeightedDistance(int p, int q) {
 		for (int i = 0; i < attribute_amount; i++) distance += subspace_preference_vectors[p][i] * pow(data[p].getAttribute(i) - data[q].getAttribute(i), 2.0);
 		return pow(distance, 0.5);
 	} else if (metric == Minkowski1) {
-		for (int i = 0; i < attribute_amount; i++) distance += subspace_preference_vectors[p][i] * abs(data[p].getAttribute(i) - data[q].getAttribute(i));
+		for (int i = 0; i < attribute_amount; i++) distance += subspace_preference_vectors[p][i] * std::abs(data[p].getAttribute(i) - data[q].getAttribute(i));
 		return distance;
 	} else if (metric == MinkowskiInf) {
 		for (int i = 0; i < attribute_amount; i++) distance = std::max(subspace_preference_vectors[p][i] * std::abs(data[p].getAttribute(i) - data[q].getAttribute(i)), distance);
@@ -465,7 +488,7 @@ void predecon::writeOUTFile() {
 	std::string out_fname("OUT_PREDECON_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
 		std::to_string(sample_amount) + "_e" + std::to_string(epsilon) + "_d" + std::to_string(delta) + "_l" + std::to_string(lambda) +
 		"_m" + std::to_string(mi) + "_k" + std::to_string(kappa) + "_mink" +
-		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? "_r0" : "") + ".csv");
+		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? (use_r_max ? "_rmax" : "_r0") : "") + ".csv");
 	file.open(out_fname);
 	if (file.is_open()){
 		file << "point id, ";
@@ -483,17 +506,17 @@ void predecon::writeOUTFile() {
 
 void predecon::writeDEBUGFile() {
 	std::ofstream file;
-	std::string out_fname("DEBUG_predecon_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
+	std::string out_fname("DEBUG_PREDECON_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
 		std::to_string(sample_amount) + "_e" + std::to_string(epsilon) + "_d" + std::to_string(delta) + "_l" + std::to_string(lambda) +
 		"_m" + std::to_string(mi) + "_k" + std::to_string(kappa) + "_mink" +
-		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? "_r0" : "") + ".csv");
+		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? (use_r_max ? "_rmax" : "_r0") : "") + ".csv");
 	file.open(out_fname);
 	if (file.is_open()){
 		file << "point id, |eps_neighbourhood|, |preference weighted eps_neighbourhood|, PDIM, variance vector, esp_neighbours, preference weighted eps_neighbours\n";
 		for (int i = 0; i < sample_amount; i++){
 			file << data[i].getId() << ", " << e_neighbours[i].size() << ", " << preference_weighted_e_neighbours[i].size() <<
 			", " << calculateSubspacePreferenceDimensionality(i) << ", [";
-			for (float v : variances[i]) file << v << (v != variances[i].back() ? "," : "");
+			for (float v : variances[i]) file << v << ",";
 			file << "], [";
 			for (int n : e_neighbours[i]) file << n << (n != e_neighbours[i].back() ? "," : "");
 			file << "], [";
@@ -507,10 +530,10 @@ void predecon::writeDEBUGFile() {
 
 void predecon::writeSTATFile() {
 	std::ofstream file;
-	std::string out_fname("STAT_predecon_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
+	std::string out_fname("STAT_PREDECON_" + filename + "_D" + std::to_string(attribute_amount) + "_R" +
 		std::to_string(sample_amount) + "_e" + std::to_string(epsilon) + "_d" + std::to_string(delta) + "_l" + std::to_string(lambda) +
 		"_m" + std::to_string(mi) + "_k" + std::to_string(kappa) + "_mink" +
-		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? "_r0" : "") + ".csv");
+		((metric == Minkowski1) ? "1" : ((metric == Minkowski2) ? "2" : ((metric == MinkowskiInf) ? "Inf" : "?"))) + (use_TI ? (use_r_max ? "_rmax" : "_r0") : "") + ".csv");
 	file.open(out_fname);
 	if (file.is_open()){
 		file << "Input file: " << filename << "\n";
@@ -577,12 +600,12 @@ void predecon::calculateRand() {
 	tp = 0;
 	tn = 0;
 	for (int p = 0; p < sample_amount; p++) {
-		for (int q = p; q < sample_amount; q++) {
+		for (int q = p + 1; q < sample_amount; q++) {
 			if (original_int_cluster_id[p] == original_int_cluster_id[q] && cluster_id[p] == cluster_id[q]) tp++;
 			if (original_int_cluster_id[p] != original_int_cluster_id[q] && cluster_id[p] != cluster_id[q]) tn++;
 		}
 	}
-	rand = (tp + tn)/pairs;
+	rand = ((float)tp + (float)tn)/(float)pairs;
 	printf("Calculated RAND\n");
 }
 
@@ -615,26 +638,31 @@ void predecon::calculateSilhouetteCoefficient() {
 	}
 	float a, b, b_cluster, s;
 	for (int i = 0; i < sample_amount; i++) {
-		if (cluster_id[i] == -1) continue;
-		a = 0;
-		b = 0;
-		// calculate a
-		for (int j = 0; j < sample_amount; j++) {
-			if (i == j) continue;
-			if (cluster_id[i] == cluster_id[j]) a += calculateDistance(i, j)/(num_of_points_in_cluster[cluster_id[i]] - 1);
-		}
-		// calculate b
-		for (int c = 1; c < original_cluster_id.size() + 1; c++) {
-			if (c == cluster_id[i]) continue;
-			b_cluster = 0;
+		if (cluster_id[i] == -1) s = 0;
+		else
+		{
+			a = 0;
+			b = 0;
+			// calculate a
 			for (int j = 0; j < sample_amount; j++) {
-				if (cluster_id[j] == c) b_cluster += calculateDistance(i, j)/num_of_points_in_cluster[c];
+				if (i == j) continue;
+				if (cluster_id[i] == cluster_id[j]) a += calculateDistance(i, j)/(num_of_points_in_cluster[cluster_id[i]] - 1);
 			}
-			if (b == 0) b = b_cluster;
-			else b = std::min(b, b_cluster);
+			// calculate b
+			for (int c = 1; c < current_cluster_id + 1; c++) {
+				if (c == cluster_id[i]) continue;
+				b_cluster = 0;
+				for (int j = 0; j < sample_amount; j++) {
+					if (cluster_id[j] == c) b_cluster += calculateDistance(i, j)/num_of_points_in_cluster[c];
+				}
+				b = std::min(b, b_cluster);
+			}
+			for (int j = 0; j< sample_amount; j++) {
+				if (cluster_id[j] == -1) b = std::min(b, calculateDistance(i, j));
+			}
+			s = (b - a)/std::max(a, b);
 		}
-		s = (b - a)/std::max(a, b);
-		silhouette_coefficient = std::max(silhouette_coefficient, s);
+		silhouette_coefficient += s/sample_amount;
 	}
 	printf("Calculated Silhouette Coefficient\n");
 }

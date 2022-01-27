@@ -13,5 +13,5 @@ make
 ## Runninig
 ```
 cd bin
-./main
+./run_<algorithm_name> <filename> <other_arguments>
 ```

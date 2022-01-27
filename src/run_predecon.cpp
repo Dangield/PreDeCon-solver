@@ -32,7 +32,9 @@ int main(int argc, char const *argv[])
 			}
 			if (!strcmp(argv[i], "-ti")) {
 				solver.useTI(true);
-				i++;
+			}
+			if (!strcmp(argv[i], "-rmax")) {
+				solver.useRMax(true);
 			}
 		}
 	}
